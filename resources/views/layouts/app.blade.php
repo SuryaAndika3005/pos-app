@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>@yield('title', 'POS & ERP Modern') - BuildPro</title>
+    <title>@yield('title', 'POS & ERP Modern') - Dinda Perabot</title>
 
     <meta name="csrf-token" content="{{ csrf_token() }}">
     
@@ -24,6 +24,10 @@
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         ::-webkit-scrollbar { width: 0px; background: transparent; }
         [x-cloak] { display: none !important; }
+
+        /* Dipakai di area yang perlu scroll tapi scrollbar-nya disembunyikan visualnya */
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
 
         @media print {
             body * { visibility: hidden; }

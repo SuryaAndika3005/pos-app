@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CheckoutRequest;
 use App\Models\Product;
+use App\Models\StockMovement;
 use App\Models\Transaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -62,6 +63,7 @@ public function index(Request $request)
 
                 $subtotal   = 0.0;
                 $itemsToSave = [];
+                $stockMovementsToSave = [];
 
                 foreach ($data['items'] as $line) {
                     // lockForUpdate mencegah race condition stok saat transaksi paralel.
@@ -96,8 +98,16 @@ public function index(Request $request)
                         'subtotal'     => $lineSubtotal,
                     ];
 
-                    // Potong stok produk.
+                    // Potong stok produk + catat sebagai pergerakan stok keluar.
+                    $stockBefore = (float) $product->stock;
                     $product->decrement('stock', $qty);
+
+                    $stockMovementsToSave[] = [
+                        'product_id'   => $product->id,
+                        'stock_before' => $stockBefore,
+                        'stock_after'  => $stockBefore - $qty,
+                        'quantity'     => $qty,
+                    ];
                 }
 
                 $tax   = round($subtotal * self::TAX_RATE, 2);
@@ -121,6 +131,21 @@ public function index(Request $request)
                 ]);
 
                 $transaction->items()->createMany($itemsToSave);
+
+                // Catat setiap pemotongan stok sebagai pergerakan 'out' bersumber 'sale',
+                // tertaut ke transaksi ini agar bisa dilacak dari halaman Gudang.
+                foreach ($stockMovementsToSave as $movement) {
+                    StockMovement::create([
+                        'product_id'      => $movement['product_id'],
+                        'user_id'         => Auth::id(),
+                        'type'            => 'out',
+                        'quantity'        => $movement['quantity'],
+                        'stock_before'    => $movement['stock_before'],
+                        'stock_after'     => $movement['stock_after'],
+                        'source'          => 'sale',
+                        'transaction_id'  => $transaction->id,
+                    ]);
+                }
 
                 return $transaction->load('items');
             });

@@ -39,7 +39,7 @@
 
         <div class="flex justify-between items-end mb-2 px-1">
             <h2 class="text-lg font-bold text-slate-900 dark:text-white">Bahan Tersedia</h2>
-            <span class="text-xs font-bold text-indigo-500 dark:text-indigo-400 cursor-pointer">Lihat Semua →</span>
+            <a href="{{ route('pos.index') }}" class="text-xs font-bold text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 cursor-pointer">Lihat Semua →</a>
         </div>
 
         {{-- Grid Produk --}}

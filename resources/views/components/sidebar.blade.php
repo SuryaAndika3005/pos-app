@@ -13,11 +13,11 @@
         <div class="flex flex-col items-center mb-8 mt-2">
             <div class="bg-indigo-100 dark:bg-indigo-900 border-2 border-white dark:border-slate-800 shadow-sm overflow-hidden flex items-center justify-center transition-all duration-300"
                  :class="sidebarOpen ? 'w-16 h-16 rounded-2xl mb-3' : 'w-12 h-12 rounded-xl mb-0'">
-                <img src="{{ $cashierAvatar ?? 'https://api.dicebear.com/7.x/notionists/svg?seed=Surya' }}" alt="Kasir" class="w-full h-full object-cover">
+                <img src="{{ $cashierAvatar ?? 'https://api.dicebear.com/7.x/notionists/svg?seed=' . urlencode(Auth::user()->name ?? 'Kasir') }}" alt="Kasir" class="w-full h-full object-cover">
             </div>
             <div x-show="sidebarOpen" x-cloak class="text-center transition-opacity duration-300 overflow-hidden">
-                <h3 class="font-bold text-base text-slate-800 dark:text-white whitespace-nowrap">{{ $cashierName ?? 'Surya Andika' }}</h3>
-                <p class="text-xs font-semibold text-slate-400 dark:text-slate-500">Kasir Utama</p>
+                <h3 class="font-bold text-base text-slate-800 dark:text-white whitespace-nowrap">{{ Auth::user()->name ?? 'Tamu' }}</h3>
+                <p class="text-xs font-semibold text-slate-400 dark:text-slate-500">{{ Auth::user()?->isAdmin() ? 'Admin' : 'Kasir' }}</p>
             </div>
         </div>
 
@@ -31,25 +31,40 @@
                 <span x-show="sidebarOpen" x-cloak class="font-bold whitespace-nowrap">Kasir POS</span>
             </a>
 
-            <a href="#"
+            @if (Auth::user()?->isAdmin())
+            <a href="{{ route('inventory.index') }}"
                class="flex items-center gap-3 p-3 rounded-xl transition-all {{ $active === 'inventory' ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-400 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700' }}">
                 <div class="flex items-center justify-center w-6 shrink-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
                 </div>
-                <span x-show="sidebarOpen" x-cloak class="font-bold whitespace-nowrap">Gudang AI</span>
+                <span x-show="sidebarOpen" x-cloak class="font-bold whitespace-nowrap">Gudang</span>
             </a>
+            @endif
 
-            <a href="#"
+            @if (Auth::user()?->isAdmin())
+            <a href="{{ route('report.index') }}"
                class="flex items-center gap-3 p-3 rounded-xl transition-all {{ $active === 'report' ? 'bg-indigo-500 text-white shadow-md' : 'text-slate-400 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700' }}">
                 <div class="flex items-center justify-center w-6 shrink-0">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 </div>
                 <span x-show="sidebarOpen" x-cloak class="font-bold whitespace-nowrap">Laporan</span>
             </a>
+            @endif
         </nav>
     </div>
 
     <div>
+        {{-- Tombol Logout --}}
+        <form method="POST" action="{{ route('logout') }}" class="mb-2">
+            @csrf
+            <button type="submit" class="w-full flex items-center gap-3 p-3 rounded-xl transition-all text-slate-400 dark:text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20">
+                <div class="flex items-center justify-center w-6 shrink-0">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                </div>
+                <span x-show="sidebarOpen" x-cloak class="font-bold whitespace-nowrap text-sm">Keluar</span>
+            </button>
+        </form>
+
         {{-- Tombol Toggle Dark Mode --}}
         <button @click="darkMode = !darkMode" class="w-full mb-4 flex items-center gap-3 p-3 rounded-xl transition-all text-slate-400 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-700">
             <div class="flex items-center justify-center w-6 shrink-0">
@@ -62,8 +77,8 @@
         {{-- Banner Bawah (Hilang saat compact) --}}
         <div x-show="sidebarOpen" x-cloak class="bg-indigo-50 dark:bg-indigo-900/30 rounded-2xl p-4 text-center relative overflow-hidden mx-2 transition-opacity border border-transparent dark:border-indigo-800/50">
             <div class="w-10 h-10 bg-indigo-100 dark:bg-indigo-800/50 rounded-full absolute -top-3 -right-3"></div>
-            <h4 class="font-bold text-sm text-indigo-900 dark:text-indigo-300 mb-1 relative z-10">AI Aktif</h4>
-            <p class="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium relative z-10">Stok terpantau.</p>
+            <h4 class="font-bold text-sm text-indigo-900 dark:text-indigo-300 mb-1 relative z-10">Gudang</h4>
+            <p class="text-[10px] text-indigo-600 dark:text-indigo-400 font-medium relative z-10">Pantau stok & riwayat barang.</p>
         </div>
         <div x-show="!sidebarOpen" class="flex justify-center pb-2">
             <div class="w-10 h-10 bg-indigo-50 dark:bg-slate-700 rounded-full flex items-center justify-center text-indigo-500 dark:text-indigo-400 shadow-sm">
