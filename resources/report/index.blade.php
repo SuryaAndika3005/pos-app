@@ -12,6 +12,7 @@
             <p class="text-xs font-bold text-slate-400 mt-1">Ringkasan penjualan dan riwayat transaksi.</p>
         </div>
 
+        {{-- Filter rentang tanggal --}}
         <form method="GET" action="{{ route('report.index') }}" class="flex items-center gap-2">
             <input type="date" name="start" value="{{ $startDate }}"
                    class="px-3 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-semibold dark:text-white">
@@ -78,39 +79,31 @@
             <table class="w-full text-sm">
                 <thead>
                     <tr class="bg-slate-50 dark:bg-slate-900/40 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
-                        <th class="px-4 py-3">No. Invoice</th>
-                        <th class="px-4 py-3">Tanggal</th>
-                        <th class="px-4 py-3">Pelanggan</th>
-                        <th class="px-4 py-3">Kasir</th>
-                        <th class="px-4 py-3">Metode</th>
-                        <th class="px-4 py-3 text-right">Total</th>
-                        <th class="px-4 py-3 text-right">Aksi</th>
+                        <th class="px-5 py-3">No. Invoice</th>
+                        <th class="px-5 py-3">Tanggal</th>
+                        <th class="px-5 py-3">Kasir</th>
+                        <th class="px-5 py-3">Metode</th>
+                        <th class="px-5 py-3 text-right">Total</th>
+                        <th class="px-5 py-3 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50 dark:divide-slate-700/50">
                     @forelse ($transactions as $trx)
                         <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/20 transition-colors">
-                            <td class="px-4 py-3 font-bold text-indigo-500">{{ $trx->invoice_number }}</td>
-                            <td class="px-4 py-3 text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap">{{ $trx->created_at->format('d M Y, H:i') }}</td>
-                            <td class="px-4 py-3">
-                                @if ($trx->customer_name)
-                                    <span class="font-semibold text-slate-800 dark:text-white">{{ $trx->customer_name }}</span>
-                                @else
-                                    <span class="text-slate-300 dark:text-slate-600 text-xs font-semibold italic">—</span>
-                                @endif
-                            </td>
-                            <td class="px-4 py-3 text-slate-500 dark:text-slate-400 font-semibold">{{ $trx->user->name ?? '—' }}</td>
-                            <td class="px-4 py-3">
+                            <td class="px-5 py-3 font-bold text-indigo-500">{{ $trx->invoice_number }}</td>
+                            <td class="px-5 py-3 text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap">{{ $trx->created_at->format('d M Y, H:i') }}</td>
+                            <td class="px-5 py-3 text-slate-500 dark:text-slate-400 font-semibold">{{ $trx->user->name ?? '—' }}</td>
+                            <td class="px-5 py-3">
                                 <span class="inline-block px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300 text-[11px] font-bold uppercase">{{ $trx->payment_method }}</span>
                             </td>
-                            <td class="px-4 py-3 text-right font-bold text-slate-800 dark:text-white">Rp {{ number_format($trx->total, 0, ',', '.') }}</td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="px-5 py-3 text-right font-bold text-slate-800 dark:text-white">Rp {{ number_format($trx->total, 0, ',', '.') }}</td>
+                            <td class="px-5 py-3 text-right">
                                 <a href="{{ route('report.show', $trx) }}" class="text-xs font-bold text-indigo-500 hover:text-indigo-600">Lihat Detail →</a>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-5 py-16 text-center text-slate-400 dark:text-slate-600 font-bold">
+                            <td colspan="6" class="px-5 py-16 text-center text-slate-400 dark:text-slate-600 font-bold">
                                 Tidak ada transaksi pada rentang tanggal ini.
                             </td>
                         </tr>

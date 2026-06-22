@@ -43,7 +43,7 @@ class ReportController extends Controller
             ->get()
             ->keyBy('date');
 
-        // Susun semua tanggal dalam rentang agar grafik tidak bolong di hari tanpa transaksi.
+        // Susun semua tanggal dalam rentang agar grafik tidak bolong.
         $chartLabels = [];
         $chartValues = [];
         $cursor = $startDate->copy();
@@ -84,7 +84,7 @@ class ReportController extends Controller
     }
 
     /**
-     * Detail satu transaksi (untuk lihat ulang struk).
+     * Detail satu transaksi.
      */
     public function show(Transaction $transaction): View
     {

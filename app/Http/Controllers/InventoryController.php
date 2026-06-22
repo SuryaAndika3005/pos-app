@@ -100,8 +100,7 @@ class InventoryController extends Controller
     }
 
     /**
-     * Perbarui data produk. Perubahan stok lewat form ini dicatat sebagai
-     * 'adjustment' di stock_movements (bukan 'in'/'out' transaksi penjualan).
+     * Perbarui data produk.
      */
     public function update(ProductRequest $request, Product $product): RedirectResponse
     {
@@ -150,7 +149,7 @@ class InventoryController extends Controller
     }
 
     /**
-     * Riwayat pergerakan stok untuk satu produk (restock, penjualan, koreksi).
+     * Riwayat pergerakan stok untuk satu produk.
      */
     public function history(Product $product): View
     {

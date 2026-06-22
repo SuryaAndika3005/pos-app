@@ -19,11 +19,10 @@ class Product extends Model
         'price',
         'cost_price',
         'unit',
-        'unit_type',   // 'integer' (bulat) | 'decimal' (boleh pecahan)
+        'unit_type',
         'stock',
         'min_stock',
         'is_active',
-        // Kolom prediksi: diisi proses eksternal (model Python), bukan dari form ini.
         'daily_avg_usage',
         'predicted_stockout_at',
         'prediction_updated_at',
@@ -34,10 +33,10 @@ class Product extends Model
         'cost_price'             => 'decimal:2',
         'stock'                  => 'decimal:2',
         'min_stock'              => 'decimal:2',
-        'is_active'               => 'boolean',
-        'daily_avg_usage'         => 'decimal:4',
-        'predicted_stockout_at'   => 'date',
-        'prediction_updated_at'   => 'datetime',
+        'is_active'              => 'boolean',
+        'daily_avg_usage'        => 'decimal:4',
+        'predicted_stockout_at'  => 'date',
+        'prediction_updated_at'  => 'datetime',
     ];
 
     /**
@@ -49,7 +48,7 @@ class Product extends Model
     }
 
     /**
-     * Apakah stok sudah di bawah ambang batas (threshold statis dari kolom min_stock).
+     * Apakah stok sudah di bawah ambang batas.
      */
     public function isLowStock(): bool
     {

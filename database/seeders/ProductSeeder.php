@@ -20,7 +20,7 @@ class ProductSeeder extends Seeder
                 'sku' => 'KN-001', 'name' => 'Kain Oscar Sintetis', 'category' => 'Kain',
                 'description' => 'Sintetis, Anti Air, Lebar 1.4 meter, Cokelat.',
                 'price' => 45000, 'cost_price' => 30000,
-                'unit' => 'mtr', 'unit_type' => 'decimal', 'stock' => 8, 'min_stock' => 10, // sengaja low-stock
+                'unit' => 'mtr', 'unit_type' => 'decimal', 'stock' => 8, 'min_stock' => 10,
             ],
             [
                 'sku' => 'DKR-001', 'name' => 'Dakron Silikon', 'category' => 'Dakron',

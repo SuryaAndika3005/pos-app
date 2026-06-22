@@ -9,12 +9,11 @@ class ProductRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // Pembatasan akses sudah ditangani middleware 'admin' di rute.
+        return true;
     }
 
     public function rules(): array
     {
-        // Saat update, abaikan unique check untuk SKU milik produk itu sendiri.
         $productId = $this->route('product')?->id;
 
         return [
@@ -29,7 +28,7 @@ class ProductRequest extends FormRequest
             'stock'       => ['required', 'numeric', 'min:0'],
             'min_stock'   => ['required', 'numeric', 'min:0'],
             'is_active'   => ['nullable', 'boolean'],
-            'image'       => ['nullable', 'image', 'max:2048'], // maks 2MB
+            'image'       => ['nullable', 'image', 'max:2048'],
         ];
     }
 

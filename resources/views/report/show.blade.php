@@ -13,7 +13,13 @@
         </a>
         <div>
             <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{{ $transaction->invoice_number }}</h1>
-            <p class="text-xs font-bold text-slate-400">{{ $transaction->created_at->format('d M Y, H:i') }} · Kasir: {{ $transaction->user->name ?? '—' }}</p>
+            <p class="text-xs font-bold text-slate-400">
+                {{ $transaction->created_at->format('d M Y, H:i') }}
+                · Kasir: {{ $transaction->user->name ?? '—' }}
+                @if ($transaction->customer_name)
+                    · <span class="text-indigo-500">Pelanggan: {{ $transaction->customer_name }}</span>
+                @endif
+            </p>
         </div>
     </header>
 
@@ -39,17 +45,51 @@
                 </div>
             </div>
 
-            {{-- Ringkasan pembayaran --}}
-            <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[24px] p-5 shadow-sm h-fit">
-                <h3 class="font-bold text-slate-800 dark:text-white mb-4">Pembayaran</h3>
-                <div class="flex flex-col gap-2 text-sm">
-                    <div class="flex justify-between"><span class="text-slate-400 font-semibold">Subtotal</span><span class="font-bold text-slate-800 dark:text-white">Rp {{ number_format($transaction->subtotal, 0, ',', '.') }}</span></div>
-                    <div class="flex justify-between"><span class="text-slate-400 font-semibold">Pajak (11%)</span><span class="font-bold text-slate-800 dark:text-white">Rp {{ number_format($transaction->tax, 0, ',', '.') }}</span></div>
-                    <div class="flex justify-between pt-2 border-t border-slate-100 dark:border-slate-700"><span class="text-slate-600 dark:text-slate-300 font-bold">Total</span><span class="font-black text-indigo-500">Rp {{ number_format($transaction->total, 0, ',', '.') }}</span></div>
-                    <div class="flex justify-between"><span class="text-slate-400 font-semibold">Metode</span><span class="font-bold text-slate-800 dark:text-white uppercase">{{ $transaction->payment_method }}</span></div>
-                    <div class="flex justify-between"><span class="text-slate-400 font-semibold">Dibayar</span><span class="font-bold text-slate-800 dark:text-white">Rp {{ number_format($transaction->paid_amount, 0, ',', '.') }}</span></div>
-                    <div class="flex justify-between"><span class="text-slate-400 font-semibold">Kembalian</span><span class="font-bold text-slate-800 dark:text-white">Rp {{ number_format($transaction->change_amount, 0, ',', '.') }}</span></div>
+            {{-- Kolom kanan: info pelanggan + pembayaran --}}
+            <div class="flex flex-col gap-4">
+
+                {{-- Info Pelanggan (hanya tampil jika ada nama) --}}
+                @if ($transaction->customer_name)
+                <div class="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/50 rounded-[24px] p-5 shadow-sm">
+                    <div class="flex items-center gap-2 mb-2">
+                        <svg class="w-4 h-4 text-indigo-500 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                        <h3 class="font-bold text-indigo-800 dark:text-indigo-300 text-xs uppercase tracking-wider">Pelanggan</h3>
+                    </div>
+                    <p class="font-black text-slate-900 dark:text-white text-base">{{ $transaction->customer_name }}</p>
                 </div>
+                @endif
+
+                {{-- Ringkasan pembayaran --}}
+                <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-[24px] p-5 shadow-sm h-fit">
+                    <h3 class="font-bold text-slate-800 dark:text-white mb-4">Pembayaran</h3>
+                    <div class="flex flex-col gap-2 text-sm">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400 font-semibold">Subtotal</span>
+                            <span class="font-bold text-slate-800 dark:text-white">Rp {{ number_format($transaction->subtotal, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400 font-semibold">Pajak (11%)</span>
+                            <span class="font-bold text-slate-800 dark:text-white">Rp {{ number_format($transaction->tax, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between pt-2 border-t border-slate-100 dark:border-slate-700">
+                            <span class="text-slate-600 dark:text-slate-300 font-bold">Total</span>
+                            <span class="font-black text-indigo-500">Rp {{ number_format($transaction->total, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400 font-semibold">Metode</span>
+                            <span class="font-bold text-slate-800 dark:text-white uppercase">{{ $transaction->payment_method }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400 font-semibold">Dibayar</span>
+                            <span class="font-bold text-slate-800 dark:text-white">Rp {{ number_format($transaction->paid_amount, 0, ',', '.') }}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400 font-semibold">Kembalian</span>
+                            <span class="font-bold text-slate-800 dark:text-white">Rp {{ number_format($transaction->change_amount, 0, ',', '.') }}</span>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>

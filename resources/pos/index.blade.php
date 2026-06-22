@@ -268,6 +268,7 @@
 <script>
 const COMPLETE_URL = '{{ url("/pos/queue") }}';
 const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+const CART_KEY = 'pos_carts_v1';
 
 async function completeQueue(id, invoice, btn) {
     btn.disabled = true;
@@ -301,7 +302,52 @@ document.addEventListener('alpine:init', () => {
         currentTime: '',
         showNumpad: false, numpadTarget: null, numpadBuffer: '',
 
-        init() { this.updateTime(); setInterval(() => this.updateTime(), 1000); },
+        // ---- PERSISTENSI KERANJANG ----
+        // Keranjang disimpan ke sessionStorage agar tidak hilang saat
+        // filter kategori / pencarian menyebabkan page reload.
+        saveState() {
+            try {
+                sessionStorage.setItem(CART_KEY, JSON.stringify({
+                    carts: this.carts,
+                    activeCartIndex: this.activeCartIndex,
+                }));
+            } catch (e) {}
+        },
+        loadState() {
+            try {
+                const raw = sessionStorage.getItem(CART_KEY);
+                if (!raw) return;
+                const saved = JSON.parse(raw);
+                // Validasi minimal: harus array dengan setidaknya satu item
+                if (Array.isArray(saved.carts) && saved.carts.length > 0) {
+                    // Pastikan setiap cart punya semua field yang dibutuhkan
+                    this.carts = saved.carts.map(c => ({
+                        id:           c.id            ?? 1,
+                        name:         c.name          ?? 'Antrean 1',
+                        customerName: c.customerName  ?? '',
+                        customerId:   c.customerId    ?? null,
+                        customerDebt: c.customerDebt  ?? 0,
+                        items:        Array.isArray(c.items) ? c.items : [],
+                    }));
+                    const idx = saved.activeCartIndex ?? 0;
+                    this.activeCartIndex = idx < this.carts.length ? idx : 0;
+                }
+            } catch (e) {
+                // Session storage corrupt / invalid — biarkan state default
+            }
+        },
+
+        init() {
+            // Restore keranjang dari session sebelum apapun
+            this.loadState();
+
+            this.updateTime();
+            setInterval(() => this.updateTime(), 1000);
+
+            // Pantau perubahan carts dan activeCartIndex, simpan otomatis
+            this.$watch('carts', () => this.saveState(), { deep: true });
+            this.$watch('activeCartIndex', () => this.saveState());
+        },
         updateTime() {
             const now = new Date();
             this.currentTime = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) + ' — ' + now.toLocaleTimeString('id-ID');
@@ -401,7 +447,16 @@ document.addEventListener('alpine:init', () => {
             item.qty = this.clean(q); if (!item.qty) this.removeItem(item.id);
         },
         removeItem(id) { this.items = this.items.filter(i => i.id !== id); },
-        clearCart()    { this.items = []; if (this.activeCart) { this.activeCart.customerName = ''; this.activeCart.customerId = null; this.activeCart.customerDebt = 0; } },
+        clearCart() {
+            // Hapus isi antrean aktif saja; antrean lain tetap ada
+            if (this.activeCart) {
+                this.activeCart.items        = [];
+                this.activeCart.customerName = '';
+                this.activeCart.customerId   = null;
+                this.activeCart.customerDebt = 0;
+            }
+            // saveState() otomatis terpanggil via $watch
+        },
 
         openCheckout() {
             if (!this.items.length) { window.dispatchEvent(new CustomEvent('toast', { detail: { msg: 'Keranjang kosong!', type: 'error' } })); return; }

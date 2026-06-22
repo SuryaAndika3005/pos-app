@@ -10,9 +10,8 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserIsAdmin
 {
     /**
-     * Batasi akses ke halaman yang hanya boleh dibuka oleh role 'admin'
-     * (mis. Gudang dan Laporan). Kasir biasa akan ditolak dengan pesan jelas
-     * dan dikembalikan ke halaman Kasir POS.
+     * Batasi akses ke halaman yang hanya boleh dibuka oleh role 'admin'.
+     * Kasir biasa akan ditolak dan dikembalikan ke halaman Kasir POS.
      */
     public function handle(Request $request, Closure $next): Response
     {

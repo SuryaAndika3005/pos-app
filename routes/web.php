@@ -1,16 +1,12 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DebtController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PosController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
-
-/*
-|--------------------------------------------------------------------------
-| Web Routes — BuildPro POS
-|--------------------------------------------------------------------------
-*/
 
 // ===================== AUTENTIKASI =====================
 Route::middleware('guest')->group(function () {
@@ -24,13 +20,15 @@ Route::middleware('auth')->group(function () {
 
     Route::redirect('/', '/pos');
 
-    // --- Kasir POS (semua role login boleh akses) ---
+    // --- Kasir POS ---
     Route::get('/pos', [PosController::class, 'index'])->name('pos.index');
     Route::post('/pos/checkout', [PosController::class, 'store'])->name('pos.checkout');
+    Route::patch('/pos/queue/{transaction}/complete', [PosController::class, 'complete'])->name('pos.complete');
 
-    // --- Gudang & Laporan (khusus admin) ---
+    // --- Admin only ---
     Route::middleware('admin')->group(function () {
 
+        // Gudang
         Route::prefix('inventory')->name('inventory.')->group(function () {
             Route::get('/', [InventoryController::class, 'index'])->name('index');
             Route::get('/create', [InventoryController::class, 'create'])->name('create');
@@ -42,9 +40,28 @@ Route::middleware('auth')->group(function () {
             Route::post('/{product}/restock', [InventoryController::class, 'restock'])->name('restock');
         });
 
+        // Laporan
         Route::prefix('report')->name('report.')->group(function () {
             Route::get('/', [ReportController::class, 'index'])->name('index');
             Route::get('/{transaction}', [ReportController::class, 'show'])->name('show');
+        });
+
+        // Direktori Pelanggan
+        Route::prefix('customers')->name('customer.')->group(function () {
+            Route::get('/', [CustomerController::class, 'index'])->name('index');
+            Route::post('/', [CustomerController::class, 'store'])->name('store');
+            Route::get('/search', [CustomerController::class, 'search'])->name('search'); // JSON autocomplete
+            Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
+            Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
+            // Lunasi semua utang satu pelanggan
+            Route::post('/{customer}/pay-all', [DebtController::class, 'payAll'])->name('pay-all');
+        });
+
+        // Manajemen Utang
+        Route::prefix('debts')->name('debt.')->group(function () {
+            Route::get('/', [DebtController::class, 'index'])->name('index');
+            Route::get('/{debt}', [DebtController::class, 'show'])->name('show');
+            Route::post('/{debt}/pay', [DebtController::class, 'pay'])->name('pay');
         });
     });
 });

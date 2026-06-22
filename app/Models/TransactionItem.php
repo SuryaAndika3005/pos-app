@@ -10,10 +10,10 @@ class TransactionItem extends Model
     protected $fillable = [
         'transaction_id',
         'product_id',
-        'product_name',  // snapshot nama saat transaksi
+        'product_name',
         'unit',
-        'price',         // harga satuan saat transaksi
-        'quantity',      // DESIMAL: muat 2.5 mtr / 1.5 kg
+        'price',
+        'quantity',
         'discount',
         'subtotal',
     ];
