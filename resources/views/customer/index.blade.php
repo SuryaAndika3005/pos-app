@@ -91,20 +91,20 @@
             <form method="POST" action="{{ route('customer.store') }}" class="flex flex-col gap-4">
                 @csrf
                 <div>
-                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Nama *</label>
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Nama*</label>
                     <input type="text" name="name" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
-                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">No. Telp</label>
-                    <input type="text" name="phone" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500">
+                    <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">No. Telp*</label>
+                    <input type="text" name="phone" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Alamat</label>
-                    <input type="text" name="address" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500">
+                    <input type="text" name="address" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500">
                 </div>
                 <div>
                     <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Catatan Internal</label>
-                    <textarea name="notes" rows="2" class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500"></textarea>
+                    <textarea name="notes" rows="2" required class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500"></textarea>
                 </div>
                 <div class="flex gap-3 mt-2">
                     <button type="button" @click="showAdd = false" class="flex-1 py-3 rounded-xl font-bold text-slate-500 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 transition-colors">Batal</button>
