@@ -5,24 +5,108 @@
 @section('content')
 <main class="flex-1 h-full flex flex-col min-w-0" x-data="{ tab: 'history', showPayAll: false }">
 
-    {{-- Header --}}
-    <header class="flex items-center gap-3 mb-5">
+
+<header class="flex items-start justify-between mb-6">
+    <div class="flex items-center gap-3">
         <a href="{{ route('customer.index') }}"
            class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-indigo-500 transition-colors shadow-sm">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path></svg>
         </a>
-        <div class="flex-1">
-            <h1 class="text-2xl font-black text-slate-900 dark:text-white">{{ $customer->name }}</h1>
-            <p class="text-xs font-bold text-slate-400">{{ $customer->phone ?? 'Tanpa no. telp' }} @if($customer->address) · {{ $customer->address }} @endif</p>
+        <div>
+            <h1 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">{{ $customer->name }}</h1>
+            <p class="text-xs font-bold text-slate-400">
+                {{ $customer->phone ?? 'Tanpa no. telp' }}
+                @if ($customer->address) · {{ $customer->address }} @endif
+            </p>
         </div>
-        @if ($customer->total_debt > 0)
-            <button @click="showPayAll = true"
-                    class="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white font-bold text-sm px-5 py-3 rounded-2xl shadow-lg transition-all">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                Lunasi Semua Utang
-            </button>
+    </div>
+
+    {{-- Tombol Aksi --}}
+    <div class="flex items-center gap-2" x-data="{ showEdit: false, showDelete: false }">
+
+        {{-- Tombol Edit --}}
+        <button @click="showEdit = true"
+                class="px-4 py-2.5 rounded-xl font-bold text-sm text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-100 dark:border-indigo-800/50 transition-colors">
+            ✏️ Edit
+        </button>
+
+        {{-- Tombol Hapus (hanya tampil jika tidak ada utang aktif) --}}
+        @if ($customer->total_debt <= 0)
+        <button @click="showDelete = true"
+                class="px-4 py-2.5 rounded-xl font-bold text-sm text-red-600 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-100 dark:border-red-800/50 transition-colors">
+            🗑️ Hapus
+        </button>
+        @else
+        <span class="px-4 py-2.5 rounded-xl font-bold text-sm text-slate-400 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 cursor-not-allowed"
+              title="Tidak bisa menghapus pelanggan yang masih memiliki utang">
+            🗑️ Hapus
+        </span>
         @endif
-    </header>
+
+        {{-- Modal Edit --}}
+        <div x-show="showEdit" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div class="bg-white dark:bg-slate-800 w-[420px] rounded-[28px] p-7 shadow-2xl border dark:border-slate-700" @click.outside="showEdit = false" x-transition>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4">Edit Data Pelanggan</h3>
+                <form method="POST" action="{{ route('customer.update', $customer) }}" class="flex flex-col gap-3">
+                    @csrf
+                    @method('PUT')
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Nama *</label>
+                        <input type="text" name="name" value="{{ old('name', $customer->name) }}" required
+                               class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500">
+                        @error('name') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">No. Telepon</label>
+                        <input type="text" name="phone" value="{{ old('phone', $customer->phone) }}"
+                               class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500">
+                        @error('phone') <p class="text-red-500 text-xs mt-1">{{ $message }}</p> @enderror
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Alamat</label>
+                        <textarea name="address" rows="2"
+                                  class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500">{{ old('address', $customer->address) }}</textarea>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1 block">Catatan Internal</label>
+                        <textarea name="notes" rows="2"
+                                  class="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-semibold text-sm dark:text-white focus:outline-none focus:border-indigo-500">{{ old('notes', $customer->notes) }}</textarea>
+                    </div>
+                    <div class="flex gap-3 mt-2">
+                        <button type="button" @click="showEdit = false"
+                                class="flex-1 py-3 rounded-xl font-bold text-slate-500 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 transition-colors">Batal</button>
+                        <button type="submit"
+                                class="flex-[2] py-3 rounded-xl font-bold text-white bg-indigo-500 hover:bg-indigo-600 transition-colors shadow-md">Simpan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {{-- Modal Konfirmasi Hapus --}}
+        <div x-show="showDelete" x-cloak class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div class="bg-white dark:bg-slate-800 w-[380px] rounded-[28px] p-7 shadow-2xl border dark:border-slate-700" @click.outside="showDelete = false" x-transition>
+                <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-2">Hapus Pelanggan?</h3>
+                <p class="text-sm text-slate-500 dark:text-slate-400 mb-5">
+                    Data <strong>{{ $customer->name }}</strong> akan dihapus secara permanen dari direktori.
+                    Riwayat transaksi yang sudah ada tidak akan ikut terhapus.
+                </p>
+                <div class="flex gap-3">
+                    <button type="button" @click="showDelete = false"
+                            class="flex-1 py-3 rounded-xl font-bold text-slate-500 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 transition-colors">Batal</button>
+                    <form method="POST" action="{{ route('customer.destroy', $customer) }}" class="flex-[2]">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit"
+                                class="w-full py-3 rounded-xl font-bold text-white bg-red-500 hover:bg-red-600 transition-colors shadow-md">
+                            Ya, Hapus
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+{{-- ===== AKHIR PATCH HEADER ===== --}}
 
     @if (session('status'))
         <div class="mb-4 px-4 py-3 rounded-2xl bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-400 text-sm font-bold">

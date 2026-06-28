@@ -170,13 +170,15 @@
 
                     {{-- Uang Diterima --}}
                     <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 block">Uang Diterima</label>
-                    <input type="number" x-model.number="paidAmount" min="0"
-                           class="w-full mb-2 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-lg text-slate-800 dark:text-white focus:outline-none focus:border-indigo-500">
+                    <input type="text" 
+                        x-model="formattedPaidAmount" 
+                        @input="updatePaidAmount($event.target.value)" 
+                        class="w-full mb-2 px-4 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-lg text-slate-800 dark:text-white focus:outline-none focus:border-indigo-500">
                     <div class="flex gap-2 mb-4">
-                        <button type="button" @click="paidAmount = Math.round(total)" class="flex-1 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors border border-indigo-100 dark:border-indigo-800/50">Uang Pas</button>
-                        <button type="button" @click="paidAmount = 50000"  class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors">50k</button>
-                        <button type="button" @click="paidAmount = 100000" class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors">100k</button>
-                        <button type="button" @click="paidAmount = 0"      class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors">0</button>
+                        <button type="button" @click="setPaidAmount = Math.round(total)" class="flex-1 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors border border-indigo-100 dark:border-indigo-800/50">Uang Pas</button>
+                        <button type="button" @click="setPaidAmount = 50000"  class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors">50k</button>
+                        <button type="button" @click="setPaidAmount = 100000" class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-30OTHING">
+                        <button type="button" @click="setPaidAmount = 0"      class="flex-1 py-1.5 bg-slate-100 dark:bg-slate-700 text-slate-6₀ dark:text-slate-3₀ rounded-lg text-xs font-bold hover:bg-slate-2₀ transition-colors">₀</button>
                     </div>
 
                     {{-- Kembalian / Kurang Bayar --}}
@@ -264,6 +266,7 @@
 </div>
 @endsection
 
+
 @push('scripts')
 <script>
 const COMPLETE_URL = '{{ url("/pos/queue") }}';
@@ -296,7 +299,10 @@ document.addEventListener('alpine:init', () => {
 
         taxRate: 0.11,
         showModal: false, processing: false, result: null,
-        paymentMethod: 'cash', paidAmount: 0, dueDate: '',
+        paymentMethod: 'cash',
+        paidAmount: 0,             // nilai numerik bersih untuk kalkulasi & kirim ke server
+        paidAmountDisplay: '',     // FIX: string berformat untuk ditampilkan di input
+        dueDate: '',
         barcodeBuffer: '', barcodeTimer: null,
         currentTime: '',
         showNumpad: false, numpadTarget: null, numpadBuffer: '',
@@ -359,6 +365,20 @@ document.addEventListener('alpine:init', () => {
             } catch {}
         },
 
+        // FIX: Format input paid amount dengan titik ribuan otomatis
+        onPaidInput(e) {
+            let raw = e.target.value.replace(/\D/g, ''); // ambil digit saja
+            if (raw === '') { this.paidAmount = 0; this.paidAmountDisplay = ''; return; }
+            let num = parseInt(raw, 10);
+            this.paidAmount = num;
+            // Format angka dengan titik ribuan gaya Indonesia
+            this.paidAmountDisplay = new Intl.NumberFormat('id-ID').format(num);
+            // Kembalikan kursor ke akhir setelah render
+            this.$nextTick(() => {
+                e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+            });
+        },
+
         // ---- NUMPAD ----
         openNumpad(item)  { this.numpadTarget = item; this.numpadBuffer = ''; this.showNumpad = true; },
         closeNumpad()     { this.showNumpad = false; setTimeout(() => { this.numpadTarget = null; this.numpadBuffer = ''; }, 200); },
@@ -405,7 +425,13 @@ document.addEventListener('alpine:init', () => {
 
         openCheckout() {
             if (!this.items.length) { window.dispatchEvent(new CustomEvent('toast', { detail: { msg: 'Keranjang kosong!', type: 'error' } })); return; }
-            this.result = null; this.paidAmount = Math.round(this.total); this.dueDate = ''; this.showModal = true;
+            this.result = null;
+            // FIX: Set paidAmount ke total dan format tampilan dengan titik ribuan
+            const totalRounded = Math.round(this.total);
+            this.paidAmount = totalRounded;
+            this.paidAmountDisplay = new Intl.NumberFormat('id-ID').format(totalRounded);
+            this.dueDate = '';
+            this.showModal = true;
         },
 
         handleKeydown(e) {
@@ -431,9 +457,13 @@ document.addEventListener('alpine:init', () => {
 
         async checkout() {
             if (this.processing) return;
-            // Validasi lokal: kurang bayar wajib ada nama
             if (this.paidAmount < this.total && !this.activeCart.customerName?.trim()) {
                 window.dispatchEvent(new CustomEvent('toast', { detail: { msg: 'Nama pelanggan wajib diisi jika kurang bayar!', type: 'error' } }));
+                return;
+            }
+            // FIX: Jika kurang bayar tapi tidak ada customer_id (ketik manual), tampilkan warning
+            if (this.paidAmount < this.total && !this.activeCart.customerId) {
+                window.dispatchEvent(new CustomEvent('toast', { detail: { msg: 'Untuk utang, pilih pelanggan dari daftar (klik hasil pencarian).', type: 'error' } }));
                 return;
             }
             this.processing = true;
@@ -445,7 +475,7 @@ document.addEventListener('alpine:init', () => {
                         customer_name:  this.activeCart.customerName || null,
                         customer_id:    this.activeCart.customerId || null,
                         payment_method: this.paymentMethod,
-                        paid_amount:    this.paidAmount,
+                        paid_amount:    this.paidAmount,  // FIX: kirim nilai numerik bersih
                         due_date:       this.dueDate || null,
                         items: this.items.map(i => ({ id: i.id, qty: i.qty })),
                     }),

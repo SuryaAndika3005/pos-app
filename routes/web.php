@@ -25,6 +25,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/pos/checkout', [PosController::class, 'store'])->name('pos.checkout');
     Route::patch('/pos/queue/{transaction}/complete', [PosController::class, 'complete'])->name('pos.complete');
 
+    // --- Edit Nota (kasir & admin boleh edit, tapi bisa dibatasi hanya admin di sini) ---
+    Route::get('/pos/transactions/{transaction}/edit', [PosController::class, 'edit'])->name('pos.edit');
+    Route::put('/pos/transactions/{transaction}', [PosController::class, 'update'])->name('pos.update');
+
     // --- Admin only ---
     Route::middleware('admin')->group(function () {
 
@@ -50,10 +54,10 @@ Route::middleware('auth')->group(function () {
         Route::prefix('customers')->name('customer.')->group(function () {
             Route::get('/', [CustomerController::class, 'index'])->name('index');
             Route::post('/', [CustomerController::class, 'store'])->name('store');
-            Route::get('/search', [CustomerController::class, 'search'])->name('search'); // JSON autocomplete
+            Route::get('/search', [CustomerController::class, 'search'])->name('search');
             Route::get('/{customer}', [CustomerController::class, 'show'])->name('show');
             Route::put('/{customer}', [CustomerController::class, 'update'])->name('update');
-            // Lunasi semua utang satu pelanggan
+            Route::delete('/{customer}', [CustomerController::class, 'destroy'])->name('destroy'); // FIX: tambah route hapus
             Route::post('/{customer}/pay-all', [DebtController::class, 'payAll'])->name('pay-all');
         });
 

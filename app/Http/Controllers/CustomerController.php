@@ -77,6 +77,33 @@ class CustomerController extends Controller
         return redirect()->route('customer.show', $customer)->with('status', 'Data pelanggan diperbarui.');
     }
 
+    /**
+     * Hapus data pelanggan (soft delete).
+     * Hanya bisa dihapus jika tidak ada utang aktif.
+     */
+    public function destroy(Customer $customer)
+    {
+        // Cegah hapus jika masih ada utang aktif
+        if ($customer->total_debt > 0) {
+            if (request()->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Tidak bisa menghapus pelanggan yang masih memiliki utang aktif.',
+                ], 422);
+            }
+            return redirect()->route('customer.show', $customer)
+                ->with('error', 'Tidak bisa menghapus pelanggan yang masih memiliki utang aktif.');
+        }
+
+        $customer->delete();
+
+        if (request()->expectsJson()) {
+            return response()->json(['success' => true, 'message' => 'Pelanggan berhasil dihapus.']);
+        }
+
+        return redirect()->route('customer.index')->with('status', 'Pelanggan berhasil dihapus.');
+    }
+
     /** Cari pelanggan untuk autocomplete di POS (JSON) */
     public function search(Request $request)
     {

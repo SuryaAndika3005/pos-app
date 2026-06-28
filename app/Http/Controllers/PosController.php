@@ -8,6 +8,7 @@ use App\Models\Debt;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\Transaction;
+use App\Models\TransactionItem;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -106,26 +107,23 @@ class PosController extends Controller
                 $paid   = isset($data['paid_amount']) ? (float) $data['paid_amount'] : $total;
                 $paid   = max(0, $paid);
                 $change = max(0, round($paid - $total, 2));
-                $debt   = round($total - min($paid, $total), 2); // selisih kurang bayar
+                $debt   = round($total - min($paid, $total), 2);
 
                 // ---- Resolve / buat Customer ----
+                // FIX: Hanya cocokkan pelanggan jika customer_id dikirim (dipilih dari dropdown).
+                // Jika nama diketik manual tanpa pilih dari dropdown, JANGAN cocokkan ke pelanggan lama
+                // → transaksi tetap tercatat dengan nama teks saja, tanpa mengikat ke akun pelanggan manapun.
                 $customer   = null;
                 $customerId = null;
 
                 if (! empty($data['customer_name'])) {
-                    // Cari berdasarkan customer_id yang dikirim (kalau dipilih dari direktori)
+                    // Hanya ambil pelanggan jika kasir memilih dari direktori (ada customer_id)
                     if (! empty($data['customer_id'])) {
                         $customer = Customer::find($data['customer_id']);
                     }
-                    // Kalau tidak ada, cari by nama (case-insensitive)
-                    if (! $customer) {
-                        $customer = Customer::whereRaw('LOWER(name) = ?', [strtolower(trim($data['customer_name']))])->first();
-                    }
-                    // Kalau masih tidak ada, buat baru
-                    if (! $customer) {
-                        $customer = Customer::create(['name' => trim($data['customer_name'])]);
-                    }
-                    $customerId = $customer->id;
+                    // Tidak lagi auto-match berdasarkan nama — mencegah transaksi masuk ke pelanggan yang salah
+                    // Tidak lagi auto-create pelanggan saat checkout — harus dibuat manual di direktori pelanggan
+                    $customerId = $customer?->id;
                 }
 
                 $transaction = Transaction::create([
@@ -141,7 +139,7 @@ class PosController extends Controller
                     'paid_amount'    => $paid,
                     'change_amount'  => $change,
                     'status'         => 'paid',
-                    'queue_status'   => 'paid',   // masuk antrean aktif
+                    'queue_status'   => 'paid',
                     'note'           => $data['note'] ?? null,
                 ]);
 
@@ -175,16 +173,13 @@ class PosController extends Controller
                         'due_date'         => $data['due_date'] ?? null,
                     ]);
 
-                    // Update cache total_debt di customer
                     $customer->increment('total_debt', $debt);
                 } elseif ($debt > 0) {
-                    // Kurang bayar tapi tidak ada nama pelanggan → tolak
                     throw ValidationException::withMessages([
-                        'customer_name' => 'Nama pelanggan wajib diisi jika pembayaran kurang dari total.',
+                        'customer_name' => 'Pilih pelanggan terdaftar (dari dropdown) jika pembayaran kurang dari total.',
                     ]);
                 }
 
-                // Update cache total_spent customer
                 if ($customer) {
                     $customer->increment('total_spent', $total);
                 }
@@ -227,6 +222,174 @@ class PosController extends Controller
         return response()->json([
             'success' => true,
             'message' => "#{$transaction->invoice_number} sudah diserahkan.",
+        ]);
+    }
+
+    /**
+     * Tampilkan form edit nota transaksi.
+     */
+    public function edit(Transaction $transaction)
+    {
+        // Hanya transaksi berstatus 'paid' (belum void) yang bisa diedit
+        if ($transaction->status === 'void') {
+            return redirect()->route('report.show', $transaction)
+                ->with('status', 'Transaksi yang sudah dibatalkan tidak bisa diedit.');
+        }
+
+        $transaction->load('items');
+        $products = Product::where('is_active', true)->orderBy('name')->get();
+
+        return view('pos.edit', compact('transaction', 'products'));
+    }
+
+    /**
+     * Simpan perubahan nota transaksi.
+     * Mengembalikan stok item yang dihapus/dikurangi, mengurangi stok item yang ditambah.
+     */
+    public function update(Request $request, Transaction $transaction): JsonResponse
+    {
+        $data = $request->validate([
+            'items'                => ['required', 'array', 'min:1'],
+            'items.*.id'           => ['required', 'integer', 'exists:products,id'],
+            'items.*.qty'          => ['required', 'numeric', 'gt:0'],
+            'customer_name'        => ['nullable', 'string', 'max:100'],
+            'customer_id'          => ['nullable', 'integer', 'exists:customers,id'],
+            'payment_method'       => ['nullable', 'in:cash,qris,transfer,debit'],
+            'paid_amount'          => ['nullable', 'numeric', 'min:0'],
+            'note'                 => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($transaction->status === 'void') {
+            return response()->json(['success' => false, 'message' => 'Transaksi void tidak bisa diedit.'], 422);
+        }
+
+        try {
+            $result = DB::transaction(function () use ($data, $transaction) {
+
+                // --- Kembalikan stok item lama ---
+                foreach ($transaction->items as $oldItem) {
+                    if ($oldItem->product_id) {
+                        $product = Product::lockForUpdate()->find($oldItem->product_id);
+                        if ($product) {
+                            $stockBefore = (float) $product->stock;
+                            $product->increment('stock', (float) $oldItem->quantity);
+                            StockMovement::create([
+                                'product_id'     => $product->id,
+                                'user_id'        => Auth::id(),
+                                'type'           => 'in',
+                                'quantity'       => (float) $oldItem->quantity,
+                                'stock_before'   => $stockBefore,
+                                'stock_after'    => $stockBefore + (float) $oldItem->quantity,
+                                'source'         => 'edit_reversal',
+                                'transaction_id' => $transaction->id,
+                                'note'           => 'Koreksi edit nota ' . $transaction->invoice_number,
+                            ]);
+                        }
+                    }
+                }
+
+                // Hapus item lama
+                $transaction->items()->delete();
+
+                // --- Proses item baru ---
+                $subtotal    = 0.0;
+                $itemsToSave = [];
+
+                foreach ($data['items'] as $line) {
+                    $product = Product::lockForUpdate()->findOrFail($line['id']);
+                    $qty     = (float) $line['qty'];
+
+                    if ($product->unit_type === 'integer' && floor($qty) != $qty) {
+                        throw ValidationException::withMessages([
+                            'items' => "Produk {$product->name} hanya bisa dijual dalam jumlah bulat.",
+                        ]);
+                    }
+                    if ((float) $product->stock < $qty) {
+                        throw ValidationException::withMessages([
+                            'items' => "Stok {$product->name} tidak mencukupi (tersisa {$product->stock} {$product->unit}).",
+                        ]);
+                    }
+
+                    $lineSubtotal  = round((float) $product->price * $qty, 2);
+                    $subtotal     += $lineSubtotal;
+
+                    $itemsToSave[] = [
+                        'product_id'   => $product->id,
+                        'product_name' => $product->name,
+                        'unit'         => $product->unit,
+                        'price'        => $product->price,
+                        'quantity'     => $qty,
+                        'discount'     => 0,
+                        'subtotal'     => $lineSubtotal,
+                    ];
+
+                    $stockBefore = (float) $product->stock;
+                    $product->decrement('stock', $qty);
+
+                    StockMovement::create([
+                        'product_id'     => $product->id,
+                        'user_id'        => Auth::id(),
+                        'type'           => 'out',
+                        'quantity'       => $qty,
+                        'stock_before'   => $stockBefore,
+                        'stock_after'    => $stockBefore - $qty,
+                        'source'         => 'edit_sale',
+                        'transaction_id' => $transaction->id,
+                        'note'           => 'Item dari edit nota ' . $transaction->invoice_number,
+                    ]);
+                }
+
+                $tax    = round($subtotal * self::TAX_RATE, 2);
+                $total  = round($subtotal + $tax, 2);
+                $paid   = isset($data['paid_amount']) ? (float) $data['paid_amount'] : $total;
+                $paid   = max(0, $paid);
+                $change = max(0, round($paid - $total, 2));
+
+                // Resolve customer (sama dengan store: hanya jika customer_id ada)
+                $customer   = null;
+                $customerId = null;
+                if (! empty($data['customer_name']) && ! empty($data['customer_id'])) {
+                    $customer   = Customer::find($data['customer_id']);
+                    $customerId = $customer?->id;
+                } elseif (! empty($data['customer_name'])) {
+                    // Nama diketik manual, tidak ikat ke customer
+                    $customerId = $transaction->customer_id; // pertahankan link lama jika ada
+                    $customer   = $transaction->customer_id ? Customer::find($transaction->customer_id) : null;
+                }
+
+                $transaction->update([
+                    'customer_name'  => $data['customer_name'] ?? null,
+                    'customer_id'    => $customerId,
+                    'subtotal'       => $subtotal,
+                    'tax'            => $tax,
+                    'total'          => $total,
+                    'payment_method' => $data['payment_method'] ?? $transaction->payment_method,
+                    'paid_amount'    => $paid,
+                    'change_amount'  => $change,
+                    'note'           => $data['note'] ?? null,
+                ]);
+
+                $transaction->items()->createMany($itemsToSave);
+
+                // Sinkron ulang cache total_spent pelanggan jika ada
+                if ($customer) {
+                    $customer->recalculateSpent();
+                }
+
+                return $transaction->load('items');
+            });
+        } catch (ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => collect($e->errors())->flatten()->first(),
+                'errors'  => $e->errors(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success'     => true,
+            'message'     => 'Nota berhasil diperbarui.',
+            'transaction' => $result,
         ]);
     }
 
